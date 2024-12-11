@@ -3,11 +3,13 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "start": "nodemon server.js"
+    "start": "nodemon server.js --trace-warnings"
   },
+  "type": "commonjs",
   "dependencies": {
     "crypto": "^1.0.1",
     "express": "^4.21.2",
-    "nodemon": "^3.1.7"
+    "nodemon": "^3.1.7",
+    "uuid": "^11.0.3"
   }
 }

@@ -1,7 +1,13 @@
 const express = require("express");
 const querystring = require("querystring");
 const crypto = require("crypto");
+const bodyParser = require("body-parser");
+const { v4: uuidv4 } = require("uuid");
 
+// In memory storage for pushed authorization requests
+const { savePushedRequest, getPushedRequest } = require("./db");
+
+// Create an Express application
 const app = express();
 const port = 4000;
 
@@ -14,6 +20,11 @@ const CLIENT_ID = "mock-client-id";
 const CLIENT_SECRET = "mock-client-secret";
 const REDIRECT_URI = "http://localhost:3000/callback";
 
+// Mock database for clients and tokens
+const CLIENTS = {
+  "mock-client-id": { redirectUris: ["http://localhost:3000/callback"] },
+};
+
 const logRequestData = (req, res, next) => {
   console.log("Request URL:", req.url);
   console.log("Request Headers:", req.headers);
@@ -22,6 +33,7 @@ const logRequestData = (req, res, next) => {
   next();
 };
 
+app.use(bodyParser.urlencoded({ extended: true })); // To parse URL-encoded bodies
 app.use(express.json()); // To parse JSON bodies
 app.use(logRequestData); // Use the logging middleware
 
@@ -30,10 +42,24 @@ app.get("/authorize", (req, res) => {
   const {
     client_id,
     redirect_uri,
+    request_uri,
     response_type,
     code_challenge,
     code_challenge_method,
   } = req.query;
+
+  if (request_uri && request_uri?.startsWith("urn:uuid")) {
+    // Retrieve the pushed authorization request
+    const request = getPushedRequest(request_uri);
+    if (!request) {
+      return res.status(400).json({ error: "invalid_request_uri" });
+    }
+    // Simulate user authorization and generate an authorization code
+    const authorizationCode = uuidv4(); // Random code
+    request.authorizationCode = authorizationCode;
+
+    res.redirect(`${request.redirect_uri}?code=${authorizationCode}`);
+  }
 
   if (client_id !== CLIENT_ID) {
     return res.status(400).json({ error: "Invalid client_id" });
@@ -56,6 +82,44 @@ app.get("/authorize", (req, res) => {
   res.redirect(redirectWithCode);
 });
 
+// Endpoint for Pushed Authorization Requests (PAR) - RFC 9126
+app.post("/par", (req, res) => {
+  const {
+    client_id,
+    response_type,
+    redirect_uri,
+    scope,
+    code_challenge,
+    code_challenge_method,
+  } = req.body;
+
+  // Validate client_id
+  if (!CLIENTS[client_id]) {
+    return res.status(400).json({ error: "invalid_client" });
+  }
+
+  // Validate redirect_uri
+  if (!CLIENTS[client_id].redirectUris.includes(redirect_uri)) {
+    return res.status(400).json({ error: "invalid_redirect_uri" });
+  }
+
+  // Save the pushed authorization request
+  const requestUri = `urn:uuid:${uuidv4()}`;
+  savePushedRequest(requestUri, {
+    client_id,
+    response_type,
+    redirect_uri,
+    scope,
+    code_challenge,
+    code_challenge_method,
+  });
+
+  res.status(201).json({
+    request_uri: requestUri,
+    expires_in: 300, // Request URI expires in 300 seconds
+  });
+});
+
 // Token Endpoint (Step 2)
 app.post("/token", express.urlencoded({ extended: true }), (req, res) => {
   const {
@@ -73,6 +137,14 @@ app.post("/token", express.urlencoded({ extended: true }), (req, res) => {
   if (grant_type !== "authorization_code") {
     return res.status(400).json({ error: "Unsupported grant_type" });
   }
+
+  // Validate client_id
+  // const request = Object.values(getPushedRequest()).find(
+  //   (r) => r.client_id === client_id && r.authorizationCode === code
+  // );
+  // if (!request) {
+  //   return res.status(400).json({ error: "invalid_grant" });
+  // }
 
   if (
     (client_id !== CLIENT_ID || client_secret !== CLIENT_SECRET) &&

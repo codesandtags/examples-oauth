@@ -20,3 +20,9 @@ npm install
 ```
 
 4. Replace YOUR_CLIENT_ID, YOUR_CLIENT_SECRET (if applicable), and https://example.com/oauth with your actual OAuth provider details in the code.
+
+## References
+
+- [RFC 6749: The OAuth 2.0 Authorization Framework](https://tools.ietf.org/html/rfc6749)
+- [RFC 7636: Proof Key for Code Exchange by OAuth Public Clients](https://tools.ietf.org/html/rfc7636)
+- [RFC 9126: OAuth 2.0 Pushed Authorization Requests (PAR)](https://tools.ietf.org/html/rfc9126)
