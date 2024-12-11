@@ -9,8 +9,14 @@ const port = 3000;
 // OAuth Configuration
 const clientId = process.env.CLIENT_ID;
 const clientSecret = process.env.CLIENT_SECRET;
-const authorizationServer = "https://example.com/oauth"; // Replace with your OAuth provider
+const authorizationServer = "http://localhost:4000"; // Replace with your OAuth provider
 const redirectUri = "http://localhost:3000/callback";
+
+app.get("/", (req, res) => {
+  res.send(`
+    <h1>Authorization Code Flow</h1>
+    <a href="/login">Login with Authorization Server</a>`);
+});
 
 // Redirect user to Authorization Server
 app.get("/login", (req, res) => {

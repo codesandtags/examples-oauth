@@ -2,13 +2,15 @@ const express = require("express");
 const axios = require("axios");
 const crypto = require("crypto");
 const querystring = require("querystring");
+require("dotenv").config();
 
 const app = express();
 const port = 3000;
 
 // OAuth Configuration
-const clientId = "YOUR_CLIENT_ID";
-const authorizationServer = "https://example.com/oauth"; // Replace with your OAuth provider
+const clientId = process.env.CLIENT_ID;
+const clientSecret = process.env.CLIENT_SECRET;
+const authorizationServer = "http://localhost:4000"; // Replace with your OAuth provider
 const redirectUri = "http://localhost:3000/callback";
 
 const logRequestData = (req, res, next) => {
@@ -21,6 +23,12 @@ const logRequestData = (req, res, next) => {
 
 app.use(express.json()); // To parse JSON bodies
 app.use(logRequestData); // Use the logging middleware
+
+app.get("/", (req, res) => {
+  res.send(`
+    <h1>Authorization Code Flow with PKCE</h1>
+    <a href="/login">Login with Authorization Server</a>`);
+});
 
 // Generate PKCE Code Verifier and Challenge
 function generateCodeVerifier() {
